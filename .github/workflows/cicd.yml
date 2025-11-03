@@ -33,10 +33,6 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build test -x spotlessJavaCheck
 
-      # 3️⃣ Build & Test (con coverage)
-      - name: Build and test with Maven
-        run: mvn clean verify --batch-mode
-
       # 4️⃣ Analisi statica del codice (SAST)
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
