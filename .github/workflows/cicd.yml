@@ -29,11 +29,6 @@ jobs:
         with:
           java-version: 11
 
-      - name: Test secrets
-        run: |
-          echo "username: ${{ secrets.DOCKER_USERNAME }}"
-          echo "password: ${{ secrets.DOCKER_PASSWORD }}"
-
           # 3️⃣ Initialize CodeQL (before build)
 #      - name: Initialize CodeQL
 #        uses: github/codeql-action/init@v3
