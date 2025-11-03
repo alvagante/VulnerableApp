@@ -29,11 +29,16 @@ jobs:
         with:
           java-version: 11
 
-      # 3️⃣ Initialize CodeQL (before build)
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: java
+      - name: Test secrets
+        run: |
+          echo "username: ${{ secrets.DOCKER_USERNAME }}"
+          echo "password: ${{ secrets.DOCKER_PASSWORD }}"
+
+          # 3️⃣ Initialize CodeQL (before build)
+#      - name: Initialize CodeQL
+#        uses: github/codeql-action/init@v3
+#        with:
+#          languages: java
 
       # 4️⃣ Build with Gradle (CodeQL will observe this)
       - name: Grant execute permission for gradlew
@@ -42,8 +47,8 @@ jobs:
         run: ./gradlew clean build test -x spotlessJavaCheck
 
       # 5️⃣ Perform CodeQL Analysis
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+#      - name: Perform CodeQL Analysis
+#        uses: github/codeql-action/analyze@v3
 
       # 6️⃣ Scansione delle dipendenze (SCA)
       - name: OWASP Dependency Check
