@@ -1,0 +1,78 @@
+# GitHub Actions workflow per CI/CD sicuro di un'applicazione Spring Boot
+# File: .github/workflows/secure-ci-cd-springboot.yml
+
+name: Secure CI/CD for Spring Boot
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write
+
+jobs:
+  build-test-secure:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout del codice
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup JDK
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+          # 3️⃣ Initialize CodeQL (before build)
+#      - name: Initialize CodeQL
+#        uses: github/codeql-action/init@v3
+#        with:
+#          languages: java
+
+      # 4️⃣ Build with Gradle (CodeQL will observe this)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew clean build test -x spotlessJavaCheck
+
+      # 5️⃣ Perform CodeQL Analysis
+#      - name: Perform CodeQL Analysis
+#        uses: github/codeql-action/analyze@v3
+
+      # 6️⃣ Scansione delle dipendenze (SCA)
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@1.1.0
+        with:
+          project: "springboot-app"
+          path: "."
+          format: "SARIF"
+          out: "reports"
+      - name: Upload Dependency-Check results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/dependency-check-report.sarif
+
+      # 7️⃣ Scansione per segreti nel codice
+      - name: Secret scanning with truffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          scan: repo
+          fail: true
+
+      # 8️⃣ Costruzione dell'immagine Docker
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/springboot-app:${{ github.sha }} .
+
+      # 9️⃣ Scansione dell'immagine Docker
+      - name: Scan Docker image with Grype
+        uses: anchore/scan-action@v3
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/springboot-app:${{ github.sha }}
+          fail-build: true
