@@ -28,21 +28,24 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-      - name: Build with Gradle
-        run: ./gradlew clean build test -x spotlessJavaCheck
 
-      # 4️⃣ Analisi statica del codice (SAST)
+      # 3️⃣ Initialize CodeQL (before build)
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: java
 
+      # 4️⃣ Build with Gradle (CodeQL will observe this)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew clean build test -x spotlessJavaCheck
+
+      # 5️⃣ Perform CodeQL Analysis
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 
-      # 5️⃣ Scansione delle dipendenze (SCA)
+      # 6️⃣ Scansione delle dipendenze (SCA)
       - name: OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@1.1.0
         with:
@@ -55,19 +58,19 @@ jobs:
         with:
           sarif_file: reports/dependency-check-report.sarif
 
-      # 6️⃣ Scansione per segreti nel codice
+      # 7️⃣ Scansione per segreti nel codice
       - name: Secret scanning with truffleHog
         uses: trufflesecurity/trufflehog@main
         with:
           scan: repo
           fail: true
 
-      # 7️⃣ Costruzione dell’immagine Docker
+      # 8️⃣ Costruzione dell'immagine Docker
       - name: Build Docker image
         run: |
           docker build -t ghcr.io/${{ github.repository_owner }}/springboot-app:${{ github.sha }} .
 
-      # 8️⃣ Scansione dell’immagine Docker
+      # 9️⃣ Scansione dell'immagine Docker
       - name: Scan Docker image with Grype
         uses: anchore/scan-action@v3
         with:
