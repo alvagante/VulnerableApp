@@ -1,0 +1,77 @@
+# GitHub Actions workflow per CI/CD sicuro di un'applicazione Spring Boot
+# File: .github/workflows/secure-ci-cd-springboot.yml
+
+name: Secure CI/CD for Spring Boot
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write
+
+jobs:
+  build-test-secure:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout del codice
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup JDK
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      # 3️⃣ Build & Test (con coverage)
+      - name: Build and test with Maven
+        run: mvn clean verify --batch-mode
+
+      # 4️⃣ Analisi statica del codice (SAST)
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      # 5️⃣ Scansione delle dipendenze (SCA)
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@v3
+        with:
+          project: "springboot-app"
+          path: "."
+          format: "SARIF"
+          out: "reports"
+      - name: Upload Dependency-Check results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/dependency-check-report.sarif
+
+      # 6️⃣ Scansione per segreti nel codice
+      - name: Secret scanning with truffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          scan: repo
+          fail: true
+
+      # 7️⃣ Costruzione dell’immagine Docker
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/springboot-app:${{ github.sha }} .
+
+      # 8️⃣ Scansione dell’immagine Docker
+      - name: Scan Docker image with Grype
+        uses: anchore/scan-action@v3
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/springboot-app:${{ github.sha }}
+          fail-build: true
